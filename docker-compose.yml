@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:18
+    container_name: bitbid_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: pofjej-duqrum-gomPi3
+      POSTGRES_DB: bitbid_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - bitbid_db_data:/var/lib/postgresql
+volumes:
+  bitbid_db_data:
