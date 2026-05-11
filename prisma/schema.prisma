@@ -10,8 +10,28 @@ datasource db {
 enum ListingStatus {
   DRAFT
   ACTIVE
+  LIVE
   ENDED
   CANCELLED
+}
+
+enum ListingCategory{
+  Car
+  Men
+  Women
+  Electronics
+  Gaming
+  Home
+  Handmade
+  Office
+  Outdoor
+  Sports
+  Kids
+  Books
+  Shoes
+  Pets
+  Garden
+  Other
 }
 
 model User {
@@ -31,6 +51,7 @@ model Listing {
   id          String        @id @default(uuid())
   title       String
   description String
+  category    ListingCategory @default(Other)
   startingBid Int
   currentBid  Int           @default(0)
   status      ListingStatus @default(DRAFT)
