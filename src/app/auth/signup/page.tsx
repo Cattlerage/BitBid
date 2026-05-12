@@ -1,66 +1,77 @@
 'use client';
 
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
 
-type FieldErrors = Partial<{
-  email: string;
-  password: string;
-  confirmPassword: string;
-}>;
+import { SignupFormSchema, type SignupFormInput } from '@/lib/auth/schemas';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
 
-  function validate(): boolean {
-    const next: FieldErrors = {};
+  const form = useForm<SignupFormInput>({
+    resolver: zodResolver(SignupFormSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      acceptedTerms: false,
+    },
+  });
 
-    if (!email.trim()) {
-      next.email = 'Email is required.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      next.email = 'Enter a valid email address.';
-    }
+  async function onSubmit(values: SignupFormInput) {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      }),
+    });
 
-    if (!password) {
-      next.password = 'Password is required.';
-    } else if (password.length < 8) {
-      next.password = 'Use at least 8 characters.';
-    }
-
-    if (!confirmPassword) {
-      next.confirmPassword = 'Confirm your password.';
-    } else if (confirmPassword !== password) {
-      next.confirmPassword = 'Passwords do not match.';
-    }
-
-    if (!acceptedTerms) {
-      next.email = next.email ?? 'You must accept the terms to continue.';
-      if (!next.email.includes('terms')) {
-        next.email = 'You must accept the terms to continue.';
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        form.setError('email', {
+          message: 'An account with this email already exists.',
+        });
+      } else {
+        toast.error(data.error ?? 'Something went wrong. Please try again.');
       }
+      return;
     }
 
-    setErrors(next);
-    return Object.keys(next).length === 0;
+    const signInResult = await signIn('credentials', {
+      email: values.email,
+      password: values.password,
+      redirect: false,
+    });
+
+    if (!signInResult || signInResult.error) {
+      toast.success('Account created. Please log in.');
+      router.push('/auth/login');
+      return;
+    }
+
+    router.push('/listings');
+    router.refresh();
   }
-
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setSubmitted(false);
-
-    if (!validate()) return;
-
-    setSubmitted(true);
-    setErrors({});
-  }
-
-  const inputClass =
-    'w-full min-h-11 h-11 rounded-sm border border-outline bg-foreground px-3 text-base text-white placeholder:text-grey md:h-10 md:min-h-10 md:text-sm focus:border-white focus:outline-none focus:ring-0';
 
   return (
     <main className='min-h-dvh px-4 pb-[max(4rem,env(safe-area-inset-bottom))] pt-[max(11rem,env(safe-area-inset-top))] font-sans text-white md:min-h-screen md:pb-16 md:pt-16'>
@@ -80,107 +91,120 @@ export default function SignupPage() {
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className='flex flex-col gap-4 md:gap-5'
-          noValidate
-        >
-          <div className='flex flex-col gap-1.5'>
-            <label htmlFor='email' className='text-sm text-grey'>
-              Email
-            </label>
-            <input
-              id='email'
-              name='email'
-              type='email'
-              autoComplete='email'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-              placeholder='you@example.com'
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={errors.email ? 'email-error' : undefined}
-            />
-            {errors.email ? (
-              <p id='email-error' className='text-xs text-red-400'>
-                {errors.email}
-              </p>
-            ) : null}
-          </div>
-
-          <div className='flex flex-col gap-1.5'>
-            <label htmlFor='password' className='text-sm text-grey'>
-              Password
-            </label>
-            <input
-              id='password'
-              name='password'
-              type='password'
-              autoComplete='new-password'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={inputClass}
-              placeholder='At least 8 characters'
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-            />
-            {errors.password ? (
-              <p id='password-error' className='text-xs text-red-400'>
-                {errors.password}
-              </p>
-            ) : null}
-          </div>
-
-          <div className='flex flex-col gap-1.5'>
-            <label htmlFor='confirmPassword' className='text-sm text-grey'>
-              Confirm password
-            </label>
-            <input
-              id='confirmPassword'
-              name='confirmPassword'
-              type='password'
-              autoComplete='new-password'
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={inputClass}
-              aria-invalid={Boolean(errors.confirmPassword)}
-              aria-describedby={
-                errors.confirmPassword ? 'confirm-password-error' : undefined
-              }
-            />
-            {errors.confirmPassword ? (
-              <p id='confirm-password-error' className='text-xs text-red-400'>
-                {errors.confirmPassword}
-              </p>
-            ) : null}
-          </div>
-
-          <label className='flex cursor-pointer items-start gap-3 text-sm leading-snug text-grey'>
-            <input
-              type='checkbox'
-              checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className='mt-0.5 size-5 shrink-0 rounded-sm border border-outline bg-foreground accent-brand md:size-4'
-            />
-            <span>
-              I agree to the <span className='text-white'>Terms</span> and{' '}
-              <span className='text-white'>Privacy Policy</span>.
-            </span>
-          </label>
-
-          <button
-            type='submit'
-            className='mt-2 min-h-11 w-full touch-manipulation rounded-sm bg-brand py-2.5 text-base font-medium text-background hover:bg-brand-hover md:h-10 md:min-h-10 md:py-0 md:text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand'
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className='flex flex-col gap-4 md:gap-5'
+            noValidate
           >
-            Sign up
-          </button>
+            <FormField
+              control={form.control}
+              name='name'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='text'
+                      autoComplete='name'
+                      placeholder='Your name'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {submitted ? (
-            <p className='rounded-sm border border-outline bg-foreground px-3 py-2 text-sm text-grey'>
-              Form looks valid — hook up auth or an API here; nothing was saved.
-            </p>
-          ) : null}
-        </form>
+            <FormField
+              control={form.control}
+              name='email'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='email'
+                      autoComplete='email'
+                      placeholder='you@example.com'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='password'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='password'
+                      autoComplete='new-password'
+                      placeholder='At least 8 characters'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='confirmPassword'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='password'
+                      autoComplete='new-password'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='acceptedTerms'
+              render={({ field }) => (
+                <FormItem>
+                  <div className='flex items-start gap-3'>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className='mt-0.5'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm leading-snug text-grey font-normal cursor-pointer'>
+                      I agree to the <span className='text-white'>Terms</span>{' '}
+                      and <span className='text-white'>Privacy Policy</span>.
+                    </FormLabel>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type='submit'
+              size='lg'
+              className='mt-2 h-11 w-full touch-manipulation md:h-10'
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? 'Creating account…' : 'Sign up'}
+            </Button>
+          </form>
+        </Form>
       </div>
     </main>
   );
