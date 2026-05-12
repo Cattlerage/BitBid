@@ -1,9 +1,16 @@
 import { createListing } from '@/server/actions/createListing';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
-export default function SellPage() {
+export default async function SellPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect('/auth/login');
+  }
   return (
     <main className='min-h-screen pt-30 md:pt-20 px-4 text-white'>
-      <div className='max-w-xl mx-auto bg-foreground border border-outline rounded-md p-4'>
+      <div className='max-w-xl mx-auto bg-card border border-outline rounded-md p-4'>
         <h1 className='text-xl font-bold mb-4'>Create listing</h1>
 
         <form action={createListing} className='flex flex-col gap-3'>
@@ -32,12 +39,7 @@ export default function SellPage() {
             All auctions end next day at 9:00 PM.
           </p>
 
-          <button
-            type='submit'
-            className='bg-brand hover:bg-brand-hover rounded px-3 py-2 font-semibold'
-          >
-            Create
-          </button>
+          <Button type='submit'>Create</Button>
         </form>
       </div>
     </main>
