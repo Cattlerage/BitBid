@@ -3,6 +3,7 @@
 import { Search } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function Header() {
   const pathname = usePathname();
@@ -33,36 +34,21 @@ export default function Header() {
             <input
               type='text'
               placeholder='Search for anything'
-              className='w-full h-8.5 bg-foreground text-s text-white placeholder-text-grey border-1 border-outline rounded-sm pl-4 focus:border-white focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
+              className='w-full h-8.5 bg-card text-s text-white placeholder-text-grey border-1 border-outline rounded-sm pl-4 focus:border-white focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
             />
           </div>
         </div>
 
-        <div className='flex max-md:col-span-2 items-center max-md:justify-end md:justify-around'>
-          <div>
-            <Link
-              href='/auth/signup'
-              className='inline-flex h-8.5 w-20 items-center justify-center rounded-sm hover:bg-foreground'
-            >
-              Sign up
-            </Link>
-          </div>
-          <div>
-            <Link
-              href='/auth/login'
-              className='inline-flex h-8.5 w-20 items-center justify-center rounded-sm hover:bg-foreground'
-            >
-              Log in
-            </Link>
-          </div>
-          <div>
-            <Link
-              href='/listings'
-              className='inline-flex items-center justify-center bg-brand h-8.5 w-20 ml-2 rounded-sm hover:bg-brand-hover'
-            >
-              Sell
-            </Link>
-          </div>
+        <div className='flex max-md:col-span-2 items-center max-md:justify-end md:justify-around gap-1'>
+          <Button asChild variant='ghost' size='sm' className='w-20'>
+            <Link href='/auth/signup'>Sign up</Link>
+          </Button>
+          <Button asChild variant='ghost' size='sm' className='w-20'>
+            <Link href='/auth/login'>Log in</Link>
+          </Button>
+          <Button asChild size='sm' className='w-20 ml-2'>
+            <Link href='/listings/new'>Sell</Link>
+          </Button>
         </div>
       </div>
     </header>

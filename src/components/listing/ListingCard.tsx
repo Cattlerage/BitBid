@@ -45,7 +45,7 @@ export default function ListingCard({
   const timeLeft = getTimeLeft(endTime);
 
   return (
-    <div className='w-66 shrink-0 md:w-[calc((100%-3rem)/3)] lg:w-[calc((100%-4.5rem)/4)] xl:w-[calc((100%-6rem)/5)] bg-foreground rounded-md p-4 flex flex-col text-white border border-outline relative overflow-hidden group'>
+    <div className='w-66 shrink-0 md:w-[calc((100%-3rem)/3)] lg:w-[calc((100%-4.5rem)/4)] xl:w-[calc((100%-6rem)/5)] bg-card rounded-md p-4 flex flex-col text-white border border-outline relative overflow-hidden group'>
       <div className='absolute inset-0 bg-gradient-to-b to-transparent pointer-events-none rounded-md'></div>
 
       <div className='relative w-full aspect-square rounded-md flex items-center justify-center mb-4 overflow-hidden'>
