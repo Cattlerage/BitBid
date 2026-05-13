@@ -1,7 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
+import { auth } from '@/auth';
 
 function getNextDay9PM(base = new Date()) {
   const end = new Date(base);
@@ -11,22 +11,20 @@ function getNextDay9PM(base = new Date()) {
 }
 
 export async function createListing(formData: FormData) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+
+  const seller = session.user;
+
   const title = String(formData.get('title') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim();
   const startingBid = Number(formData.get('startingBid'));
 
-  // TODO: replace with real logged-in user id
-  const sellerEmail = 'test-seller@bitbid.dev';
-
   if (!title || !description || !Number.isFinite(startingBid)) {
     throw new Error('Invalid form input');
   }
-
-  const seller = await prisma.user.upsert({
-    where: { email: sellerEmail },
-    update: {},
-    create: { name: 'Test Seller', email: sellerEmail },
-  });
 
   const endTime = getNextDay9PM();
 
