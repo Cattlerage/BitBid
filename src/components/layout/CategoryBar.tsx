@@ -91,7 +91,7 @@ export default function CategoryBar() {
         return (
           <li
             key={cat.label}
-            className='h-full min-w-[56px] px-2 flex flex-col items-center justify-center rounded-t-md hover:bg-card'
+            className='h-full min-w-[56px] px-2 flex flex-col items-center cursor-pointer justify-center rounded-t-md hover:bg-card'
           >
             <Icon size={17} strokeWidth={2} />
             <span className='text-sm'>{cat.label}</span>

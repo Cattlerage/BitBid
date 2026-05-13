@@ -115,8 +115,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scrollbar-gutter: stable;
+  }
 }
-
 .hide-scrollbar {
   overflow: auto;
   -ms-overflow-style: none;
