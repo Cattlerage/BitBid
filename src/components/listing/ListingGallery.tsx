@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -43,10 +44,12 @@ export default function ListingGallery({
     <div className='overflow-hidden md:bg-transparent md:p-3'>
       <div className='md:hidden'>
         <div className='relative aspect-square w-full overflow-hidden bg-transparent'>
-          <img
+          <Image
             src={activeImage}
             alt={title}
-            className='h-full w-full object-cover object-top'
+            fill
+            sizes='(max-width: 768px) 100vw, 60vw'
+            className='object-cover object-top'
           />
 
           {canNavigate ? (
@@ -102,9 +105,11 @@ export default function ListingGallery({
               aria-label={`Select image ${index + 1}`}
               aria-current={index === activeImageIdx ? 'true' : 'false'}
             >
-              <img
+              <Image
                 src={image}
                 alt={`${title} thumbnail ${index + 1}`}
+                width={80}
+                height={80}
                 className='h-full w-full object-cover'
               />
             </button>
@@ -128,10 +133,12 @@ export default function ListingGallery({
               aria-label={`Select image ${index + 1}`}
               aria-current={index === activeImageIdx ? 'true' : 'false'}
             >
-              <img
+              <Image
                 src={image}
                 alt={`${title} thumbnail ${index + 1}`}
-                className='h-full w-full object-cover'
+                className='object-cover'
+                width={100}
+                height={100}
               />
             </button>
           ))}
@@ -139,10 +146,12 @@ export default function ListingGallery({
 
         <div className='relative min-h-0 flex-1'>
           <div className='relative aspect-square w-full overflow-hidden bg-transparent'>
-            <img
+            <Image
               src={activeImage}
               alt={title}
-              className='h-full w-full object-contain object-top'
+              fill
+              sizes='(max-width: 768px) 100vw, 60vw'
+              className='object-cover object-top'
             />
 
             {canNavigate ? (

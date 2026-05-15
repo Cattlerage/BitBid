@@ -1,25 +1,17 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import {
-  Clock,
-  Gavel,
-  Heart,
-  History,
-  MoreHorizontal,
-  Share2,
-  ShieldCheck,
-  Star,
-} from 'lucide-react';
+import { History, ShieldCheck, Star } from 'lucide-react';
 
 import CategoryBar from '@/components/layout/CategoryBar';
 import ListingGallery from '@/components/listing/ListingGallery';
+import ListingBidForm from '@/components/listing/ListingBidForm';
 import prisma from '@/lib/prisma';
 import type { ListingStatus } from '@/generated/prisma/enums';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 type PageProps = {
@@ -37,11 +29,13 @@ function formatCurrency(amount: number) {
 function formatDateTime(d: Date) {
   return new Intl.DateTimeFormat('tr-TR', {
     dateStyle: 'medium',
-    timeStyle: 'short',
+    timeStyle: 'medium',
   }).format(d);
 }
 
-function formatTimeLeft(endTime: Date) {
+function formatTimeLeft(endTime: Date | null) {
+  if (!endTime) return 'No countdown yet';
+
   const diff = endTime.getTime() - Date.now();
   if (diff <= 0) return 'Ended';
 
@@ -60,6 +54,7 @@ function formatTimeLeft(endTime: Date) {
 function statusLabel(status: ListingStatus) {
   switch (status) {
     case 'ACTIVE':
+      return 'Active';
     case 'LIVE':
       return 'Live';
     case 'DRAFT':
@@ -114,7 +109,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
         select: { bids: true },
       },
       bids: {
-        take: 5,
+        take: 15,
         orderBy: { amount: 'desc' },
         include: {
           bidder: {
@@ -135,7 +130,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
     where: {
       sellerId: listing.sellerId,
       id: { not: listing.id },
-      status: 'ACTIVE',
+      status: { in: ['ACTIVE', 'LIVE'] },
     },
     orderBy: { createdAt: 'desc' },
     take: 6,
@@ -146,9 +141,12 @@ export default async function ListingDetailPage({ params }: PageProps) {
     },
   });
 
-  const isLive =
-    (listing.status === 'ACTIVE' || listing.status === 'LIVE') &&
-    listing.endTime.getTime() > Date.now();
+  const hasCountdown = listing.status === 'LIVE' && !!listing.endTime;
+  const isLive = hasCountdown;
+
+  const isBiddable =
+    listing.status === 'ACTIVE' ||
+    (listing.status === 'LIVE' && !!listing.endTime);
 
   const minNextBid = Math.max(listing.currentBid + 1, listing.startingBid + 1);
 
@@ -193,93 +191,70 @@ export default async function ListingDetailPage({ params }: PageProps) {
                 {statusLabel(listing.status)}
               </Badge>
               <span className='text-xs text-grey'>
-                Ends {formatDateTime(listing.endTime)}
+                {listing.endTime
+                  ? `Ends ${formatDateTime(listing.endTime)}`
+                  : 'Countdown starts after first bid'}
               </span>
             </div>
 
-            <Card className='mb-6 border-outline bg-card py-0 md:mb-8'>
-              <CardContent className='p-4 md:p-6'>
-                <div className='mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4'>
-                  <div>
-                    <p className='mb-1 text-sm font-medium text-grey'>
-                      Current bid
-                    </p>
-                    <div className='text-[#e2b054] text-4xl font-extrabold'>
-                      {formatCurrency(listing.currentBid)}
-                    </div>
-                    <p className='mt-1 text-xs text-grey'>
-                      {listing._count.bids} bids total
-                    </p>
-                  </div>
-
-                  <div className='flex flex-col gap-2 text-left sm:items-end sm:text-right'>
-                    <Badge className='bg-destructive/15 text-destructive border-0 px-3 py-1.5'>
-                      <Clock className='mr-1.5 h-4 w-4' />
-                      <span className='font-bold'>
-                        {formatTimeLeft(listing.endTime)}
-                      </span>
-                    </Badge>
-                    <p className='text-xs text-grey'>
-                      Ends {formatDateTime(listing.endTime)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className='mb-3 flex flex-col gap-2 sm:flex-row sm:gap-3'>
-                  <div className='relative flex-1'>
-                    <Input
-                      type='number'
-                      min={minNextBid}
-                      defaultValue={minNextBid}
-                      className='h-12 border-outline bg-background pl-3 text-base font-semibold'
-                    />
-                  </div>
-                  <Button
-                    size='lg'
-                    disabled={!isLive}
-                    className='h-12 w-full bg-linear-to-r from-[#ff8c00] to-[#ffaa00] px-6 font-bold text-white hover:from-[#ff9900] hover:to-[#ffb732] sm:w-auto sm:px-8'
-                  >
-                    <Gavel className='mr-2 h-5 w-5' />
-                    Place Bid
-                  </Button>
-                </div>
-
-                <p className='text-center text-xs text-grey'>
-                  Enter {formatCurrency(minNextBid)} or more
-                </p>
-              </CardContent>
-            </Card>
+            <ListingBidForm
+              listingId={listing.id}
+              isLive={isBiddable}
+              minNextBid={minNextBid}
+              minNextBidLabel={formatCurrency(minNextBid)}
+              currentBidLabel={formatCurrency(listing.currentBid)}
+              timeLeftLabel={formatTimeLeft(listing.endTime)}
+              endsAtLabel={
+                listing.endTime
+                  ? formatDateTime(listing.endTime)
+                  : 'Starts after first bid'
+              }
+              bidCount={listing._count.bids}
+            />
 
             <div className='mb-6 md:mb-8'>
               <div className='mb-3 flex items-center gap-2'>
                 <History className='h-4 w-4 text-grey' />
-                <h3 className='font-semibold'>Bid history</h3>
+                <h3 className='font-semibold'>Last 15 Bids</h3>
               </div>
 
               <Card className='overflow-hidden border-outline py-0'>
-                <div className='divide-y divide-outline'>
-                  {listing.bids.length > 0 ? (
-                    listing.bids.map((bid) => (
-                      <div
-                        key={bid.id}
-                        className='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_auto]'
-                      >
-                        <div className='min-w-0 truncate text-sm text-grey'>
-                          {bid.bidder.name}
+                <div className='max-h-64 min-h-0 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'>
+                  <div className='divide-y divide-outline'>
+                    {listing.bids.length > 0 ? (
+                      listing.bids.map((bid) => (
+                        <div
+                          key={bid.id}
+                          className='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_auto]'
+                        >
+                          <div className='min-w-0 flex items-center gap-3'>
+                            <Avatar className='h-8 w-8 border border-outline bg-muted'>
+                              <AvatarFallback className='bg-muted text-xs font-bold text-white'>
+                                {getInitials(bid.bidder.name)}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            <div className='min-w-0'>
+                              <div className='truncate text-sm text-grey'>
+                                {bid.bidder.name}
+                              </div>
+                              <div className='text-xs text-grey'>
+                                {formatDateTime(bid.createdAt)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className='text-sm font-semibold text-white'>
+                            {formatCurrency(bid.amount)}
+                          </div>
                         </div>
-                        <div className='text-sm font-semibold text-white'>
-                          {formatCurrency(bid.amount)}
-                        </div>
-                        <div className='hidden text-xs text-grey sm:block'>
-                          {formatDateTime(bid.createdAt)}
-                        </div>
+                      ))
+                    ) : (
+                      <div className='px-4 py-6 text-sm text-grey'>
+                        No bids yet. Be the first one.
                       </div>
-                    ))
-                  ) : (
-                    <div className='px-4 py-6 text-sm text-grey'>
-                      No bids yet. Be the first one.
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </Card>
             </div>
@@ -340,10 +315,6 @@ export default async function ListingDetailPage({ params }: PageProps) {
                     </div>
                   </div>
                 </div>
-
-                <Button variant='outline' className='border-outline bg-card'>
-                  Follow
-                </Button>
               </div>
 
               <div className='mt-4 flex flex-wrap items-center gap-4 text-sm md:gap-6'>
@@ -396,11 +367,13 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   href={`/listings/${item.id}`}
                   className='group'
                 >
-                  <div className='mb-3 aspect-3/4 overflow-hidden rounded-md border border-outline bg-card'>
-                    <img
+                  <div className='relative mb-3 aspect-square overflow-hidden rounded-md border border-outline bg-card'>
+                    <Image
                       src='/rolex.png'
                       alt={item.title}
-                      className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      fill
+                      sizes='(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw'
+                      className='object-cover transition-transform duration-300 group-hover:scale-105'
                     />
                   </div>
                   <h3 className='mb-1 line-clamp-2 text-sm text-grey group-hover:text-white'>

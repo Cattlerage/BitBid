@@ -3,13 +3,6 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 
-function getNextDay9PM(base = new Date()) {
-  const end = new Date(base);
-  end.setDate(end.getDate() + 1);
-  end.setHours(21, 0, 0, 0);
-  return end;
-}
-
 export async function createListing(formData: FormData) {
   const session = await auth();
   if (!session?.user) {
@@ -26,8 +19,6 @@ export async function createListing(formData: FormData) {
     throw new Error('Invalid form input');
   }
 
-  const endTime = getNextDay9PM();
-
   await prisma.listing.create({
     data: {
       title,
@@ -35,7 +26,7 @@ export async function createListing(formData: FormData) {
       startingBid,
       currentBid: startingBid,
       status: 'ACTIVE',
-      endTime,
+      endTime: null,
       sellerId: seller.id,
     },
   });

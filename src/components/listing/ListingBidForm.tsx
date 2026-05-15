@@ -121,23 +121,6 @@ export default function ListingBidForm({
           ) : null}
         </CardContent>
       </Card>
-
-      {isLive ? (
-        <div className='fixed inset-x-0 bottom-0 z-50 border-t border-outline bg-background/95 p-3 backdrop-blur md:hidden'>
-          <div className='mx-auto flex w-full max-w-360 items-center gap-3'>
-            <div className='min-w-0'>
-              <p className='text-2xs text-grey'>Current bid</p>
-              <p className='text-[#e2b054] truncate text-lg font-extrabold'>
-                {currentBidLabel}
-              </p>
-            </div>
-            <SubmitBidButton className='ml-auto h-11 min-w-34 bg-linear-to-r from-[#ff8c00] to-[#ffaa00] px-5 font-bold text-white hover:from-[#ff9900] hover:to-[#ffb732]'>
-              <Gavel className='mr-2 h-4 w-4' />
-              Place Bid
-            </SubmitBidButton>
-          </div>
-        </div>
-      ) : null}
     </form>
   );
 }
