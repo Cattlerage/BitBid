@@ -1,7 +1,9 @@
 import Link from 'next/link';
+
 import CategoryBar from '@/components/layout/CategoryBar';
 import ListingCard from '@/components/listing/ListingCard';
 import prisma from '@/lib/prisma';
+import { listingImageSrcFromKey } from '@/lib/listings/imageSrc';
 
 export default async function Home() {
   const listings = await prisma.listing.findMany({
@@ -16,6 +18,10 @@ export default async function Home() {
     include: {
       _count: {
         select: { bids: true },
+      },
+      images: {
+        orderBy: { position: 'asc' },
+        take: 1,
       },
     },
   });
@@ -48,7 +54,11 @@ export default async function Home() {
                 bidCount={listing._count.bids}
                 endTime={listing.endTime}
                 status={listing.status}
-                imageSrc='/rolex.png'
+                imageSrc={
+                  listing.images[0]?.key
+                    ? listingImageSrcFromKey(listing.images[0].key)
+                    : ''
+                }
               />
             ))}
           </div>

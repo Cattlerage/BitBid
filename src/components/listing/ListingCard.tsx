@@ -64,17 +64,23 @@ export default function ListingCard({
             compact ? 'mb-2' : 'mb-4'
           }`}
         >
-          <Image
-            src={imageSrc}
-            alt={title}
-            fill
-            sizes={
-              compact
-                ? '(max-width: 768px) 48vw, (max-width: 1024px) 31vw, (max-width: 1280px) 23vw, 16vw'
-                : '(max-width: 768px) 264px, (max-width: 1024px) 33vw, 25vw'
-            }
-            className='object-cover rounded-md'
-          />
+          {imageSrc ? (
+            <Image
+              src={imageSrc}
+              alt={title}
+              fill
+              sizes={
+                compact
+                  ? '(max-width: 768px) 48vw, (max-width: 1024px) 31vw, (max-width: 1280px) 23vw, 16vw'
+                  : '(max-width: 768px) 264px, (max-width: 1024px) 33vw, 25vw'
+              }
+              className='object-cover rounded-md'
+            />
+          ) : (
+            <div className='absolute inset-0 flex items-center justify-center bg-muted text-xs text-grey rounded-md'>
+              No image
+            </div>
+          )}
 
           <div
             className={`absolute left-2 bottom-2 bg-[#121418]/80 backdrop-blur-md border border-gray-700 rounded-md flex items-center gap-1.5 ${
@@ -98,7 +104,7 @@ export default function ListingCard({
         <h3
           className={`font-medium leading-snug text-white ${
             compact
-              ? 'text-xs mb-1.5 line-clamp-1'
+              ? 'text-sm mb-1.5 line-clamp-1'
               : 'text-sm mb-3 line-clamp-2'
           }`}
         >

@@ -17,11 +17,20 @@ export default function ListingGallery({
   images,
   isLive,
 }: ListingGalleryProps) {
-  const galleryImages = useMemo(
-    () => (images.length > 0 ? images : ['/rolex.png']),
-    [images],
-  );
+  const galleryImages = useMemo(() => images.filter(Boolean), [images]);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  if (galleryImages.length === 0) {
+    return (
+      <div className='overflow-hidden md:bg-transparent md:p-3'>
+        <div className='relative aspect-square w-full overflow-hidden rounded-md border border-outline bg-card'>
+          <div className='absolute inset-0 flex items-center justify-center text-sm text-grey'>
+            No photos yet
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const activeImage = galleryImages[activeImageIdx] ?? galleryImages[0];
   const canNavigate = galleryImages.length > 1;
@@ -136,9 +145,9 @@ export default function ListingGallery({
               <Image
                 src={image}
                 alt={`${title} thumbnail ${index + 1}`}
-                className='object-cover'
-                width={100}
-                height={100}
+                width={80}
+                height={80}
+                className='h-full w-full object-cover'
               />
             </button>
           ))}

@@ -6,6 +6,7 @@ import { History, ShieldCheck, Star } from 'lucide-react';
 import CategoryBar from '@/components/layout/CategoryBar';
 import ListingGallery from '@/components/listing/ListingGallery';
 import ListingBidForm from '@/components/listing/ListingBidForm';
+import { listingImageSrcFromKey } from '@/lib/listings/imageSrc';
 import prisma from '@/lib/prisma';
 import type { ListingStatus } from '@/generated/prisma/enums';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -105,6 +106,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
           name: true,
         },
       },
+      images: {
+        orderBy: { position: 'asc' },
+      },
       _count: {
         select: { bids: true },
       },
@@ -129,12 +133,15 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const moreFromSeller = await prisma.listing.findMany({
     where: {
       sellerId: listing.sellerId,
-      id: { not: listing.id },
       status: { in: ['ACTIVE', 'LIVE'] },
     },
     orderBy: { createdAt: 'desc' },
     take: 6,
     include: {
+      images: {
+        orderBy: { position: 'asc' },
+        take: 1,
+      },
       _count: {
         select: { bids: true },
       },
@@ -173,7 +180,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
               <ListingGallery
                 title={listing.title}
                 isLive={isLive}
-                images={['/rolex.png', '/rolex.png', '/rolex.png']}
+                images={listing.images.map((img) =>
+                  listingImageSrcFromKey(img.key),
+                )}
               />
             </div>
           </section>
@@ -361,30 +370,44 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
           {moreFromSeller.length > 0 ? (
             <div className='grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6'>
-              {moreFromSeller.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/listings/${item.id}`}
-                  className='group'
-                >
-                  <div className='relative mb-3 aspect-square overflow-hidden rounded-md border border-outline bg-card'>
-                    <Image
-                      src='/rolex.png'
-                      alt={item.title}
-                      fill
-                      sizes='(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw'
-                      className='object-cover transition-transform duration-300 group-hover:scale-105'
-                    />
-                  </div>
-                  <h3 className='mb-1 line-clamp-2 text-sm text-grey group-hover:text-white'>
-                    {item.title}
-                  </h3>
-                  <p className='text-sm font-bold text-white'>
-                    Current {formatCurrency(item.currentBid)}
-                  </p>
-                  <p className='text-2xs text-grey'>{item._count.bids} bids</p>
-                </Link>
-              ))}
+              {moreFromSeller.map((item) => {
+                const thumb = item.images[0]?.key
+                  ? listingImageSrcFromKey(item.images[0].key)
+                  : null;
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/listings/${item.id}`}
+                    className='group'
+                  >
+                    <div className='relative mb-3 aspect-square overflow-hidden rounded-md border border-outline bg-card'>
+                      {thumb ? (
+                        <Image
+                          src={thumb}
+                          alt={item.title}
+                          fill
+                          sizes='(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw'
+                          className='object-cover transition-transform duration-300 group-hover:scale-105'
+                        />
+                      ) : (
+                        <div className='absolute inset-0 flex items-center justify-center text-xs text-grey'>
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <h3 className='mb-1 line-clamp-2 text-sm text-grey group-hover:text-white'>
+                      {item.title}
+                    </h3>
+                    <p className='text-sm font-bold text-white'>
+                      Current {formatCurrency(item.currentBid)}
+                    </p>
+                    <p className='text-2xs text-grey'>
+                      {item._count.bids} bids
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <p className='text-sm text-grey'>No other active listings yet.</p>

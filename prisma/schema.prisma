@@ -99,7 +99,7 @@ model Listing {
   startingBid Int
   currentBid  Int             @default(0)
   status      ListingStatus   @default(ACTIVE)
-  endTime     DateTime?       // nullable until first bid
+  endTime     DateTime?
 
   sellerId String
   seller   User @relation("SellerListings", fields: [sellerId], references: [id])
@@ -107,12 +107,27 @@ model Listing {
   winnerId String?
   winner   User? @relation("WinnerListings", fields: [winnerId], references: [id])
 
-  bids Bid[]
+  bids   Bid[]
+  images ListingImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status, endTime])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  key       String   @unique
+  url       String
+  position  Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, position])
 }
 
 model Bid {

@@ -3,6 +3,7 @@ import CategoryBar from '@/components/layout/CategoryBar';
 import ListingCard from '@/components/listing/ListingCard';
 import prisma from '@/lib/prisma';
 import type { ListingCategory } from '@/generated/prisma/enums';
+import { listingImageSrcFromKey } from '@/lib/listings/imageSrc';
 
 const PAGE_SIZE = 24;
 
@@ -124,6 +125,10 @@ export default async function ListingsPage({ searchParams }: PageProps) {
         _count: {
           select: { bids: true },
         },
+        images: {
+          orderBy: { position: 'asc' },
+          take: 1,
+        },
       },
     }),
     prisma.listing.count({ where }),
@@ -198,7 +203,11 @@ export default async function ListingsPage({ searchParams }: PageProps) {
                 bidCount={listing._count.bids}
                 endTime={listing.endTime}
                 status={listing.status}
-                imageSrc='/rolex.png'
+                imageSrc={
+                  listing.images[0]?.key
+                    ? listingImageSrcFromKey(listing.images[0].key)
+                    : ''
+                }
                 variant='compact'
               />
             ))}
