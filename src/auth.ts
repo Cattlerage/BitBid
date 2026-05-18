@@ -18,7 +18,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     authorized: async ({ auth, request }) => {
       const { pathname } = request.nextUrl;
 
-      const publicRoutes = ['/', '/auth/login', '/auth/signup'];
+      const publicRoutes = [
+        '/',
+        '/auth/login',
+        '/auth/signup',
+        '/auth/forgot-password',
+        '/auth/reset-password',
+        '/auth/verify-email',
+      ];
       if (publicRoutes.includes(pathname)) return true;
 
       if (pathname.startsWith('/listings/') && pathname !== '/listings/new') {
@@ -28,15 +35,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return !!auth?.user;
     },
 
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role;
+        token.emailVerified = user.emailVerified?.toISOString() ?? null;
       }
+
+      if (token.id) {
+        const freshUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, emailVerified: true },
+        });
+
+        if (freshUser) {
+          token.role = freshUser.role;
+          token.emailVerified = freshUser.emailVerified?.toISOString() ?? null;
+        }
+      }
+
       return token;
     },
     session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.role = (token.role as 'USER' | 'ADMIN' | undefined) ?? 'USER';
+        session.user.isEmailVerified = Boolean(token.emailVerified);
       }
       return session;
     },
@@ -79,6 +103,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          emailVerified: user.emailVerified,
         };
       },
     }),

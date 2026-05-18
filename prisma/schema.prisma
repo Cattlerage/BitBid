@@ -34,10 +34,16 @@ enum ListingCategory {
   Other
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String
   email         String    @unique
+  role          UserRole  @default(USER)
   emailVerified DateTime?
   image         String?
   passwordHash  String?
