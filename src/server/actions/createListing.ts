@@ -1,13 +1,21 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { CreateListingServerSchema } from '@/lib/listings/schemas';
+import { firstZodIssueMessage } from '@/lib/zod/errors';
+import { getAuthUser } from '@/lib/auth/session';
+import { canCreateListing } from '@/lib/auth/policies';
 
 export async function createListing(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
+  const user = await getAuthUser();
+  const policy = canCreateListing(user);
+  if (!policy.allowed) {
+    throw new Error(policy.message);
+  }
+  if (!user) {
+    throw new Error('Sign in to create a listing.');
+  }
 
   const rawImages = String(formData.get('images') ?? '[]');
 
@@ -27,7 +35,7 @@ export async function createListing(formData: FormData) {
   });
 
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? 'Invalid listing input');
+    throw new Error(firstZodIssueMessage(parsed.error, 'Invalid listing input'));
   }
 
   const { title, description, category, startingBid, images } = parsed.data;
@@ -41,7 +49,7 @@ export async function createListing(formData: FormData) {
       currentBid: startingBid,
       status: 'ACTIVE',
       endTime: null,
-      sellerId: session.user.id,
+      sellerId: user.id,
       images: {
         create: images.map((img, i) => ({
           key: img.key,

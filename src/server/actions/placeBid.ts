@@ -1,8 +1,11 @@
 'use server';
 
-import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { PlaceBidSchema } from '@/lib/bids/schemas';
+import { firstZodIssueMessage } from '@/lib/zod/errors';
+import { getAuthUser } from '@/lib/auth/session';
+import { canPlaceBid } from '@/lib/auth/policies';
 
 export type PlaceBidState = { error?: string } | null;
 
@@ -17,22 +20,27 @@ export async function placeBid(
   _prev: PlaceBidState,
   formData: FormData,
 ): Promise<PlaceBidState> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const user = await getAuthUser();
+  const prePolicy = canPlaceBid(user);
+  if (!prePolicy.allowed) {
+    return { error: prePolicy.message };
+  }
+  if (!user) {
     return { error: 'Sign in to place a bid.' };
   }
-  const bidderId = session.user.id;
+  const bidderId = user.id;
 
-  const listingId = String(formData.get('listingId') ?? '').trim();
-  const rawAmount = formData.get('amount');
-  const amount =
-    typeof rawAmount === 'string' && rawAmount !== ''
-      ? parseInt(rawAmount, 10)
-      : Number(rawAmount);
+  const parsed = PlaceBidSchema.safeParse({
+    listingId: formData.get('listingId'),
+    amount: formData.get('amount'),
+  });
 
-  if (!listingId || !Number.isInteger(amount) || amount < 1) {
-    return { error: 'Enter a valid bid amount.' };
+  if (!parsed.success) {
+    return {
+      error: firstZodIssueMessage(parsed.error, 'Enter a valid bid amount.'),
+    };
   }
+  const { listingId, amount } = parsed.data;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -50,7 +58,13 @@ export async function placeBid(
       });
 
       if (!listing) throw new Error('LISTING_NOT_FOUND');
-      if (listing.sellerId === bidderId) throw new Error('SELF_BID');
+      const policy = canPlaceBid(user, { sellerId: listing.sellerId });
+      if (!policy.allowed) {
+        if (policy.code === 'FORBIDDEN') throw new Error('SELF_BID');
+        if (policy.code === 'EMAIL_NOT_VERIFIED')
+          throw new Error('EMAIL_NOT_VERIFIED');
+        throw new Error('UNAUTHORIZED');
+      }
       if (listing.status !== 'ACTIVE' && listing.status !== 'LIVE') {
         throw new Error('NOT_OPEN');
       }
@@ -120,6 +134,8 @@ export async function placeBid(
       ENDED: 'This auction has ended.',
       TOO_LOW: 'Your bid is too low.',
       STALE: 'Someone else bid first — refresh and try again.',
+      EMAIL_NOT_VERIFIED: 'Verify your email to continue.',
+      UNAUTHORIZED: 'Sign in to place a bid.',
     };
     return { error: map[code] ?? 'Could not place bid.' };
   }
