@@ -1,154 +1,189 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Image from 'next/image';
+import { type FormEvent, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { createListing } from '@/server/actions/createListing';
-import { ListingCategoryValues } from '@/lib/listings/schemas';
+import {
+  CreateListingFormSchema,
+  LISTING_DESCRIPTION_MAX,
+  ListingCategoryValues,
+  MAX_LISTING_IMAGES,
+} from '@/lib/listings/schemas';
+import {
+  uploadListingImagesInOrder,
+  type UploadedListingImage,
+} from '@/lib/listings/uploadListingImages';
+import { firstZodIssueMessage } from '@/lib/zod/errors';
+import ListingImageUploader, {
+  type PendingListingImage,
+} from '@/components/listing/ListingImageUploader';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-type UploadedImage = {
-  key: string;
-  url: string;
-  preview: string;
-};
+function isNextRedirectError(error: unknown) {
+  return error instanceof Error && error.message.includes('NEXT_REDIRECT');
+}
 
 export default function CreateListingForm() {
-  const [images, setImages] = useState<UploadedImage[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingListingImage[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>('Other');
 
   const canSubmit = useMemo(
-    () => !uploading && images.length > 0,
-    [uploading, images.length],
+    () => !isSubmitting && pendingImages.length > 0,
+    [isSubmitting, pendingImages.length],
   );
 
-  async function handleFiles(files: FileList | null) {
-    if (!files?.length) return;
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isSubmitting) return;
 
-    setUploadError(null);
-    setUploading(true);
+    setSubmitError(null);
+
+    if (pendingImages.length === 0) {
+      const message =
+        'Please add at least one image before creating a listing.';
+      setSubmitError(message);
+      toast.error(message);
+      return;
+    }
+    if (pendingImages.length > MAX_LISTING_IMAGES) {
+      const message = `You can upload up to ${MAX_LISTING_IMAGES} images.`;
+      setSubmitError(message);
+      toast.error(message);
+      return;
+    }
+
+    setIsSubmitting(true);
+    const formData = new FormData(event.currentTarget);
+    const parsed = CreateListingFormSchema.safeParse({
+      title: formData.get('title'),
+      description: formData.get('description'),
+      category,
+      startingBid: formData.get('startingBid'),
+    });
+
+    if (!parsed.success) {
+      const message = firstZodIssueMessage(parsed.error, 'Invalid listing input.');
+      setSubmitError(message);
+      toast.error(message);
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
-      const next = [...images];
+      const uploadedImages: UploadedListingImage[] =
+        await uploadListingImagesInOrder(
+          pendingImages.map((image) => image.file),
+        );
 
-      for (const file of Array.from(files)) {
-        if (next.length >= 8) break;
-
-        const presign = await fetch('/api/uploads/listings-image/presign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileName: file.name,
-            contentType: file.type,
-            size: file.size,
-          }),
-        });
-
-        if (!presign.ok) throw new Error('Could not prepare upload');
-        const { uploadUrl, key, url } = await presign.json();
-
-        const put = await fetch(uploadUrl, {
-          method: 'PUT',
-          body: file,
-        });
-
-        if (!put.ok) throw new Error('Upload failed');
-
-        next.push({
-          key,
-          url,
-          preview: URL.createObjectURL(file),
-        });
+      formData.set('images', JSON.stringify(uploadedImages));
+      await createListing(formData);
+    } catch (error) {
+      if (isNextRedirectError(error)) {
+        throw error;
       }
 
-      setImages(next);
-    } catch (e) {
-      setUploadError(e instanceof Error ? e.message : 'Upload failed');
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Could not create listing. Please try again.';
+      setSubmitError(message);
+      toast.error(message);
     } finally {
-      setUploading(false);
+      setIsSubmitting(false);
     }
   }
+  const [description, setDescription] = useState('');
 
-  function removeImage(idx: number) {
-    setImages((prev) => prev.filter((_, i) => i !== idx));
-  }
+  const descriptionLength = description.length;
+  const atLimit = descriptionLength >= LISTING_DESCRIPTION_MAX;
 
   return (
-    <form action={createListing} className='flex flex-col gap-4'>
-      <input
-        name='title'
-        placeholder='Title'
-        className='bg-background border border-outline rounded px-3 py-2'
-        required
-      />
-
-      <textarea
-        name='description'
-        placeholder='Description'
-        className='bg-background border border-outline rounded px-3 py-2 min-h-28'
-        required
-      />
-
-      <select
-        name='category'
-        className='bg-background border border-outline rounded px-3 py-2'
-        defaultValue='Other'
-        required
-      >
-        {ListingCategoryValues.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-
-      <input
-        name='startingBid'
-        type='number'
-        min={1}
-        step={1}
-        placeholder='Starting bid'
-        className='bg-background border border-outline rounded px-3 py-2'
-        required
-      />
+    <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
+      <div className='space-y-2'>
+        <Label htmlFor='listing-title'>Title</Label>
+        <Input
+          id='listing-title'
+          name='title'
+          placeholder='Title'
+          className='border-outline bg-background'
+          required
+        />
+      </div>
 
       <div className='space-y-2'>
-        <label className='text-sm font-medium'>Images (1-8)</label>
-        <input
-          type='file'
-          accept='image/jpeg,image/png'
-          multiple
-          onChange={(e) => handleFiles(e.target.files)}
-          className='block w-full text-sm'
-        />
-        {uploading ? <p className='text-xs text-grey'>Uploading...</p> : null}
-        {uploadError ? (
-          <p className='text-xs text-red-400'>{uploadError}</p>
-        ) : null}
-      </div>
-
-      <div className='grid grid-cols-3 sm:grid-cols-4 gap-2'>
-        {images.map((img, i) => (
-          <div
-            key={img.key}
-            className='relative aspect-square rounded border border-outline overflow-hidden'
+        <Label htmlFor='listing-description'>Description</Label>
+        <div className='relative'>
+          <Textarea
+            id='listing-description'
+            name='description'
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={LISTING_DESCRIPTION_MAX}
+            placeholder={`Max ${LISTING_DESCRIPTION_MAX} characters`}
+            className='min-h-28 resize-none overflow-y-auto border-outline bg-background field-sizing-content'
+            required
+          />
+          <p
+            className={`pointer-events-none absolute bottom-2 right-3 text-xs ${atLimit ? 'text-destructive' : 'text-muted-foreground'}`}
+            aria-live='polite'
           >
-            <Image src={img.preview} alt='' fill className='object-cover' />
-            <button
-              type='button'
-              onClick={() => removeImage(i)}
-              className='absolute top-1 right-1 text-xs bg-black/70 rounded px-1.5 py-0.5'
-            >
-              x
-            </button>
-          </div>
-        ))}
+            {descriptionLength.toLocaleString()} /{' '}
+            {LISTING_DESCRIPTION_MAX.toLocaleString()}
+          </p>
+        </div>
       </div>
 
-      <input
-        type='hidden'
-        name='images'
-        value={JSON.stringify(images.map(({ key, url }) => ({ key, url })))}
+      <div className='space-y-2'>
+        <Label htmlFor='listing-category'>Category</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger
+            id='listing-category'
+            className='w-full border-outline bg-background'
+          >
+            <SelectValue placeholder='Select category' />
+          </SelectTrigger>
+          <SelectContent>
+            {ListingCategoryValues.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input type='hidden' name='category' value={category} />
+      </div>
+
+      <div className='space-y-2'>
+        <Label htmlFor='listing-starting-bid'>Starting bid</Label>
+        <Input
+          id='listing-starting-bid'
+          name='startingBid'
+          type='number'
+          min={1}
+          step={1}
+          placeholder='Starting bid'
+          className='border-outline bg-background'
+          required
+        />
+      </div>
+
+      <ListingImageUploader
+        value={pendingImages}
+        onChange={setPendingImages}
+        disabled={isSubmitting}
+        error={submitError}
       />
 
       <p className='text-xs text-grey'>
@@ -156,7 +191,7 @@ export default function CreateListingForm() {
       </p>
 
       <Button type='submit' disabled={!canSubmit}>
-        {uploading ? 'Uploading...' : 'Create listing'}
+        {isSubmitting ? 'Creating...' : 'Create listing'}
       </Button>
     </form>
   );
