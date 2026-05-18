@@ -1,9 +1,20 @@
 import Link from 'next/link';
+import { auth } from '@/auth';
 import CategoryBar from '@/components/layout/CategoryBar';
-import ListingCard from '@/components/listing/ListingCard';
+import ListingsGridClient from '@/components/listing/ListingsGridClient';
 import prisma from '@/lib/prisma';
 import type { ListingCategory } from '@/generated/prisma/enums';
 import { listingImageSrcFromKey } from '@/lib/listings/imageSrc';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 const PAGE_SIZE = 24;
 
@@ -68,6 +79,7 @@ function buildListingsUrl(opts: {
 }
 
 export default async function ListingsPage({ searchParams }: PageProps) {
+  const session = await auth();
   const params = await searchParams;
 
   const q = params.q?.trim() ?? '';
@@ -122,6 +134,9 @@ export default async function ListingsPage({ searchParams }: PageProps) {
       skip,
       take: PAGE_SIZE,
       include: {
+        seller: {
+          select: { id: true },
+        },
         _count: {
           select: { bids: true },
         },
@@ -170,88 +185,122 @@ export default async function ListingsPage({ searchParams }: PageProps) {
           ].map((item) => {
             const active = sort === item.id;
             return (
-              <Link
+              <Button
                 key={item.id}
-                href={buildListingsUrl({
-                  q: q || undefined,
-                  category,
-                  sort: item.id as SortKey,
-                  page: 1,
-                })}
-                className={`rounded-md border px-3 py-1.5 transition-colors ${
+                asChild
+                variant={active ? 'default' : 'outline'}
+                size='sm'
+                className={`h-auto border px-3 py-1.5 text-xs ${
                   active
                     ? 'border-primary bg-primary text-background'
                     : 'border-outline bg-card text-grey hover:text-white'
                 }`}
               >
-                {item.label}
-              </Link>
+                <Link
+                  href={buildListingsUrl({
+                    q: q || undefined,
+                    category,
+                    sort: item.id as SortKey,
+                    page: 1,
+                  })}
+                >
+                  {item.label}
+                </Link>
+              </Button>
             );
           })}
         </div>
 
         {listings.length === 0 ? (
-          <p className='text-grey'>No open auctions match your filters.</p>
+          <Card className='border-outline bg-card py-0'>
+            <CardContent className='p-4'>
+              <p className='text-grey'>No open auctions match your filters.</p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'>
-            {listings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                title={listing.title}
-                href={`/listings/${listing.id}`}
-                currentBid={listing.currentBid}
-                bidCount={listing._count.bids}
-                endTime={listing.endTime}
-                status={listing.status}
-                imageSrc={
-                  listing.images[0]?.key
-                    ? listingImageSrcFromKey(listing.images[0].key)
-                    : ''
-                }
-                variant='compact'
-              />
-            ))}
-          </div>
+          <ListingsGridClient
+            initialListings={listings.map((listing) => ({
+              id: listing.id,
+              title: listing.title,
+              href: `/listings/${listing.id}`,
+              currentBid: listing.currentBid,
+              bidCount: listing._count.bids,
+              endTime: listing.endTime,
+              status: listing.status,
+              imageSrc: listing.images[0]?.key
+                ? listingImageSrcFromKey(listing.images[0].key)
+                : '',
+              sellerId: listing.seller.id,
+            }))}
+            currentUserId={session?.user?.id}
+            variant='compact'
+            wrapperClassName='w-full'
+            gridClassName='grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+          />
         )}
 
         {totalPages > 1 && (
-          <div className='mt-8 flex items-center justify-center gap-4'>
-            {page > 1 ? (
-              <Link
-                href={buildListingsUrl({
-                  q: q || undefined,
-                  category,
-                  sort,
-                  page: page - 1,
-                })}
-                className='text-primary hover:underline'
-              >
-                Previous
-              </Link>
-            ) : (
-              <span className='text-outline'>Previous</span>
-            )}
-
-            <span className='text-sm text-grey'>
-              Page {page} of {totalPages}
-            </span>
-
-            {page < totalPages ? (
-              <Link
-                href={buildListingsUrl({
-                  q: q || undefined,
-                  category,
-                  sort,
-                  page: page + 1,
-                })}
-                className='text-primary hover:underline'
-              >
-                Next
-              </Link>
-            ) : (
-              <span className='text-outline'>Next</span>
-            )}
-          </div>
+          <Pagination className='mt-8'>
+            <PaginationContent>
+              <PaginationItem>
+                {page > 1 ? (
+                  <PaginationPrevious
+                    href={buildListingsUrl({
+                      q: q || undefined,
+                      category,
+                      sort,
+                      page: page - 1,
+                    })}
+                  />
+                ) : (
+                  <PaginationLink
+                    href={buildListingsUrl({
+                      q: q || undefined,
+                      category,
+                      sort,
+                      page: 1,
+                    })}
+                    className='pointer-events-none opacity-40'
+                  >
+                    Previous
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  href='#'
+                  isActive
+                  className='pointer-events-none'
+                >
+                  {page}/{totalPages}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                {page < totalPages ? (
+                  <PaginationNext
+                    href={buildListingsUrl({
+                      q: q || undefined,
+                      category,
+                      sort,
+                      page: page + 1,
+                    })}
+                  />
+                ) : (
+                  <PaginationLink
+                    href={buildListingsUrl({
+                      q: q || undefined,
+                      category,
+                      sort,
+                      page,
+                    })}
+                    className='pointer-events-none opacity-40'
+                  >
+                    Next
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         )}
       </div>
     </main>

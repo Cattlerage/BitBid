@@ -21,6 +21,7 @@ import {
   Library,
   Car,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const categories = [
   { label: 'Car', icon: Car },
@@ -113,35 +114,45 @@ export default function CategoryBar() {
 
         return (
           <li key={cat.label}>
-            <Link
-              href={hrefFor(cat.label)}
-              className={`h-full min-w-[56px] px-2 py-1.5 flex flex-col items-center justify-center rounded-t-md transition-colors ${
-                isActive
-                  ? 'bg-card text-white'
-                  : 'text-grey hover:bg-card hover:text-white'
+            <Button
+              asChild
+              variant='ghost'
+              className={`h-full min-w-[56px] rounded-t-md px-2 py-1 text-grey hover:bg-card hover:text-white ${
+                isActive ? 'bg-card text-white' : ''
               }`}
-              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={20} strokeWidth={2} />
-              <span className='text-sm'>{cat.label}</span>
-            </Link>
+              <Link
+                href={hrefFor(cat.label)}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <span className='flex flex-col items-center justify-center'>
+                  <Icon size={20} strokeWidth={2} />
+                  <span className='text-sm'>{cat.label}</span>
+                </span>
+              </Link>
+            </Button>
           </li>
         );
       })}
 
       <li>
-        <Link
-          href={hrefFor(undefined)}
-          className={`h-full px-3 py-1.5 flex flex-col items-center justify-center rounded-t-md font-medium transition-colors ${
-            inListings && !selectedCategory
-              ? 'bg-card text-white'
-              : 'text-grey hover:bg-card hover:text-white'
+        <Button
+          asChild
+          variant='ghost'
+          className={`h-full rounded-t-md px-3 py-1.5 text-grey hover:bg-card hover:text-white ${
+            inListings && !selectedCategory ? 'bg-card text-white' : ''
           }`}
-          aria-current={inListings && !selectedCategory ? 'page' : undefined}
         >
-          <Grip size={20} strokeWidth={2} />
-          <span className='text-sm'>All</span>
-        </Link>
+          <Link
+            href={hrefFor(undefined)}
+            aria-current={inListings && !selectedCategory ? 'page' : undefined}
+          >
+            <span className='flex flex-col items-center justify-center font-medium'>
+              <Grip size={20} strokeWidth={2} />
+              <span className='text-sm'>All</span>
+            </span>
+          </Link>
+        </Button>
       </li>
     </ul>
   );

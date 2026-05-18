@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { logoutAction } from '@/server/actions/logout';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Avatar,
   AvatarFallback,
@@ -32,7 +33,7 @@ type Props = {
   user: {
     id: string;
     name: string | null;
-    email: string;
+    email: string | null;
     image: string | null;
   } | null;
 };
@@ -90,19 +91,21 @@ export default function HeaderClient({ user }: Props) {
             onSubmit={handleSearchSubmit}
             className='relative flex items-center'
           >
-            <button
+            <Button
               type='submit'
+              variant='ghost'
+              size='icon-xs'
               aria-label='Search listings'
-              className='absolute right-2 text-white'
+              className='absolute right-1.5 text-white hover:bg-transparent'
             >
               <Search size={18} strokeWidth={2} />
-            </button>
-            <input
+            </Button>
+            <Input
               name='q'
               type='text'
               defaultValue={searchParams.get('q') ?? ''}
               placeholder='Search for anything'
-              className='w-full h-8.5 bg-card text-s text-white placeholder-text-grey border border-outline rounded-sm pl-4 pr-9 focus:border-white focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
+              className='w-full h-8.5 rounded-sm border-outline bg-card pr-9 pl-4 text-s text-white placeholder:text-grey focus-visible:border-white focus-visible:ring-0'
             />
           </form>
         </div>
@@ -123,10 +126,10 @@ export default function HeaderClient({ user }: Props) {
                     <Avatar size='lg'>
                       <AvatarImage
                         src={user.image ?? undefined}
-                        alt={user.name ?? user.email}
+                        alt={user.name ?? user.email ?? 'User'}
                       />
                       <AvatarFallback>
-                        {(user.name ?? user.email).slice(0, 2).toUpperCase()}
+                        {(user.name ?? user.email ?? 'U').slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                       <AvatarBadge className='bg-green-400' />
                     </Avatar>
@@ -150,13 +153,14 @@ export default function HeaderClient({ user }: Props) {
                   <DropdownMenuSeparator />
                   <form action={logoutAction}>
                     <DropdownMenuItem asChild>
-                      <button
+                      <Button
                         type='submit'
-                        className='w-full flex items-center gap-2 cursor-pointer'
+                        variant='ghost'
+                        className='h-auto w-full justify-start px-0 py-0 font-normal'
                       >
                         <LogOutIcon />
                         Sign Out
-                      </button>
+                      </Button>
                     </DropdownMenuItem>
                   </form>
                 </DropdownMenuContent>

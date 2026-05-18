@@ -3,7 +3,9 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { History, ShieldCheck, Star } from 'lucide-react';
 
+import { auth } from '@/auth';
 import CategoryBar from '@/components/layout/CategoryBar';
+import DeleteListingButton from '@/components/listing/DeleteListingButton';
 import ListingGallery from '@/components/listing/ListingGallery';
 import ListingBidForm from '@/components/listing/ListingBidForm';
 import { listingImageSrcFromKey } from '@/lib/listings/imageSrc';
@@ -12,7 +14,7 @@ import type { ListingStatus } from '@/generated/prisma/enums';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 type PageProps = {
@@ -96,6 +98,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const session = await auth();
 
   const listing = await prisma.listing.findUnique({
     where: { id },
@@ -156,6 +159,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
     (listing.status === 'LIVE' && !!listing.endTime);
 
   const minNextBid = Math.max(listing.currentBid + 1, listing.startingBid + 1);
+  const isOwner = session?.user?.id === listing.sellerId;
 
   return (
     <main className='min-h-screen bg-background pt-30 font-sans text-white md:pt-16'>
@@ -196,18 +200,27 @@ export default async function ListingDetailPage({ params }: PageProps) {
               <Badge variant='outline' className='border-outline text-grey'>
                 {listing.category}
               </Badge>
-              <Badge variant='outline' className='border-outline text-grey'>
-                {statusLabel(listing.status)}
-              </Badge>
+
+              {isLive ? (
+                <Badge className='flex items-center gap-2 border border-outline bg-background/80 px-1.5 py-0.5 text-3xs font-bold text-white backdrop-blur-md'>
+                  <span className='relative flex h-1.5 w-1.5'>
+                    <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75' />
+                    <span className='relative inline-flex h-1.5 w-1.5 rounded-full bg-red-600' />
+                  </span>
+                  LIVE
+                </Badge>
+              ) : null}
+
               <span className='text-xs text-grey'>
                 {listing.endTime
                   ? `Ends ${formatDateTime(listing.endTime)}`
-                  : 'Countdown starts after first bid'}
+                  : null}
               </span>
             </div>
 
             <ListingBidForm
               listingId={listing.id}
+              isOwner={isOwner}
               isLive={isBiddable}
               minNextBid={minNextBid}
               minNextBidLabel={formatCurrency(minNextBid)}
@@ -260,7 +273,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
                       ))
                     ) : (
                       <div className='px-4 py-6 text-sm text-grey'>
-                        No bids yet. Be the first one.
+                        No bids yet
                       </div>
                     )}
                   </div>
@@ -325,38 +338,59 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               </div>
-
               <div className='mt-4 flex flex-wrap items-center gap-4 text-sm md:gap-6'>
                 <div>
                   <span className='font-bold'>{moreFromSeller.length}</span>{' '}
                   <span className='text-grey'>active listings</span>
                 </div>
-                <div className='inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-emerald-400'>
+                <Badge className='items-center gap-1 bg-emerald-500/10 px-2 py-0.5 text-emerald-400'>
                   <ShieldCheck className='h-4 w-4' />
                   Profile verified
-                </div>
+                </Badge>
               </div>
             </div>
 
             <Separator className='my-6 bg-outline' />
 
-            <div className='rounded-md border border-outline bg-card p-4'>
-              <div className='flex items-start gap-3'>
-                <ShieldCheck className='mt-0.5 h-5 w-5 text-primary' />
-                <div>
-                  <h4 className='font-bold'>BitBid Buyer Protection</h4>
-                  <p className='mt-1 text-sm text-grey'>
-                    Receive your item as described, or get your money back.
-                    <Link
-                      href='/'
-                      className='ml-1 text-primary hover:underline'
-                    >
-                      Learn more
-                    </Link>
-                  </p>
+            <Card className='border-outline bg-card py-0'>
+              <CardContent className='p-4'>
+                <div className='flex items-start gap-3'>
+                  <ShieldCheck className='mt-0.5 h-5 w-5 text-primary' />
+                  <div>
+                    <h4 className='font-bold'>BitBid Buyer Protection</h4>
+                    <p className='mt-1 text-sm text-grey'>
+                      Receive your item as described, or get your money back.
+                      <Link
+                        href='/'
+                        className='ml-1 text-primary hover:underline'
+                      >
+                        Learn more
+                      </Link>
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+
+            {isOwner ? (
+              <Card className='my-6 border-outline bg-card py-1'>
+                <CardContent className='space-y-3 p-3 sm:p-4'>
+                  <div>
+                    <h2 className='text-sm font-semibold text-white'>
+                      Seller actions
+                    </h2>
+                    <p className='mt-1 text-xs text-grey sm:text-sm'>
+                      Deleting is permanent and removes this listing with all
+                      bids.
+                    </p>
+                  </div>
+                  <DeleteListingButton
+                    listingId={listing.id}
+                    redirectTo='/listings'
+                  />
+                </CardContent>
+              </Card>
+            ) : null}
           </section>
         </div>
 
@@ -376,36 +410,39 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   : null;
 
                 return (
-                  <Link
-                    key={item.id}
-                    href={`/listings/${item.id}`}
-                    className='group'
-                  >
-                    <div className='relative mb-3 aspect-square overflow-hidden rounded-md border border-outline bg-card'>
-                      {thumb ? (
-                        <Image
-                          src={thumb}
-                          alt={item.title}
-                          fill
-                          sizes='(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw'
-                          className='object-cover transition-transform duration-300 group-hover:scale-105'
-                        />
-                      ) : (
-                        <div className='absolute inset-0 flex items-center justify-center text-xs text-grey'>
-                          No image
+                  <Card key={item.id} className='border-outline bg-card py-0'>
+                    <CardContent className='p-2'>
+                      <Link
+                        href={`/listings/${item.id}`}
+                        className='group block'
+                      >
+                        <div className='relative mb-3 aspect-square overflow-hidden rounded-md bg-card'>
+                          {thumb ? (
+                            <Image
+                              src={thumb}
+                              alt={item.title}
+                              fill
+                              sizes='(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw'
+                              className='object-contain transition-transform duration-300 group-hover:scale-105'
+                            />
+                          ) : (
+                            <div className='absolute inset-0 flex items-center justify-center text-xs text-grey'>
+                              No image
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <h3 className='mb-1 line-clamp-2 text-sm text-grey group-hover:text-white'>
-                      {item.title}
-                    </h3>
-                    <p className='text-sm font-bold text-white'>
-                      Current {formatCurrency(item.currentBid)}
-                    </p>
-                    <p className='text-2xs text-grey'>
-                      {item._count.bids} bids
-                    </p>
-                  </Link>
+                        <h3 className='mb-1 line-clamp-2 text-sm text-grey group-hover:text-white'>
+                          {item.title}
+                        </h3>
+                        <p className='text-sm font-bold text-white'>
+                          Current {formatCurrency(item.currentBid)}
+                        </p>
+                        <p className='text-2xs text-grey'>
+                          {item._count.bids} bids
+                        </p>
+                      </Link>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>

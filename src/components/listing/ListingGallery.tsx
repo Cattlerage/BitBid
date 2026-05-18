@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 type ListingGalleryProps = {
   title: string;
@@ -12,11 +13,7 @@ type ListingGalleryProps = {
   isLive: boolean;
 };
 
-export default function ListingGallery({
-  title,
-  images,
-  isLive,
-}: ListingGalleryProps) {
+export default function ListingGallery({ title, images }: ListingGalleryProps) {
   const galleryImages = useMemo(() => images.filter(Boolean), [images]);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
@@ -58,38 +55,32 @@ export default function ListingGallery({
             alt={title}
             fill
             sizes='(max-width: 768px) 100vw, 60vw'
-            className='object-cover object-top'
+            className='object-contain object-middle'
           />
 
           {canNavigate ? (
             <>
-              <button
+              <Button
                 type='button'
                 onClick={selectPrev}
-                className='absolute top-1/2 left-2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
+                variant='secondary'
+                size='icon'
+                className='absolute top-1/2 left-2 h-9 w-9 -translate-y-1/2 rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
                 aria-label='Previous image'
               >
                 <ChevronLeft className='h-5 w-5' />
-              </button>
-              <button
+              </Button>
+              <Button
                 type='button'
                 onClick={selectNext}
-                className='absolute top-1/2 right-2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
+                variant='secondary'
+                size='icon'
+                className='absolute top-1/2 right-2 h-9 w-9 -translate-y-1/2 rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
                 aria-label='Next image'
               >
                 <ChevronRight className='h-5 w-5' />
-              </button>
+              </Button>
             </>
-          ) : null}
-
-          {isLive ? (
-            <div className='absolute bottom-3 left-3 flex items-center gap-2 rounded-md border border-outline bg-background/85 px-2 py-1 text-2xs font-bold backdrop-blur-md'>
-              <span className='relative flex h-2.5 w-2.5'>
-                <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75' />
-                <span className='relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600' />
-              </span>
-              LIVE
-            </div>
           ) : null}
         </div>
 
@@ -101,12 +92,13 @@ export default function ListingGallery({
 
         <div className='hide-scrollbar mt-3 mx-2 flex gap-2 overflow-x-auto pb-1'>
           {galleryImages.map((image, index) => (
-            <button
+            <Button
               key={`${image}-${index}`}
               type='button'
               onClick={() => setActiveImageIdx(index)}
+              variant='ghost'
               className={cn(
-                'h-20 w-20 shrink-0 overflow-hidden border transition',
+                'h-20 w-20 shrink-0 overflow-hidden border p-0 transition',
                 index === activeImageIdx
                   ? 'border-primary ring-1 ring-primary/40'
                   : 'border-outline hover:border-muted-foreground',
@@ -119,9 +111,9 @@ export default function ListingGallery({
                 alt={`${title} thumbnail ${index + 1}`}
                 width={80}
                 height={80}
-                className='h-full w-full object-cover'
+                className='h-full w-full object-contain'
               />
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -129,12 +121,13 @@ export default function ListingGallery({
       <div className='hidden gap-4 md:flex'>
         <div className='flex shrink-0 flex-col gap-2'>
           {galleryImages.map((image, index) => (
-            <button
+            <Button
               key={`${image}-${index}`}
               type='button'
               onClick={() => setActiveImageIdx(index)}
+              variant='ghost'
               className={cn(
-                'h-20 w-20 shrink-0 overflow-hidden border transition',
+                'h-20 w-20 shrink-0 overflow-hidden border p-0 transition',
                 index === activeImageIdx
                   ? 'border-primary ring-1 ring-primary/40'
                   : 'border-outline hover:border-muted-foreground',
@@ -147,9 +140,9 @@ export default function ListingGallery({
                 alt={`${title} thumbnail ${index + 1}`}
                 width={80}
                 height={80}
-                className='h-full w-full object-cover'
+                className='h-full w-full object-contain'
               />
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -160,38 +153,32 @@ export default function ListingGallery({
               alt={title}
               fill
               sizes='(max-width: 768px) 100vw, 60vw'
-              className='object-cover object-top'
+              className='object-contain object-middle'
             />
 
             {canNavigate ? (
               <>
-                <button
+                <Button
                   type='button'
                   onClick={selectPrev}
-                  className='absolute top-1/2 left-3 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
+                  variant='secondary'
+                  size='icon'
+                  className='absolute top-1/2 left-3 h-10 w-10 -translate-y-1/2 rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
                   aria-label='Previous image'
                 >
                   <ChevronLeft className='h-5 w-5' />
-                </button>
-                <button
+                </Button>
+                <Button
                   type='button'
                   onClick={selectNext}
-                  className='absolute top-1/2 right-3 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
+                  variant='secondary'
+                  size='icon'
+                  className='absolute top-1/2 right-3 h-10 w-10 -translate-y-1/2 rounded-full bg-background/80 text-white backdrop-blur-sm transition hover:bg-background'
                   aria-label='Next image'
                 >
                   <ChevronRight className='h-5 w-5' />
-                </button>
+                </Button>
               </>
-            ) : null}
-
-            {isLive ? (
-              <div className='absolute bottom-4 left-4 flex items-center gap-2 rounded-md border border-outline bg-background/80 px-2.5 py-1.5 text-2xs font-bold backdrop-blur-md'>
-                <span className='relative flex h-2.5 w-2.5'>
-                  <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75' />
-                  <span className='relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600' />
-                </span>
-                LIVE
-              </div>
             ) : null}
           </div>
         </div>

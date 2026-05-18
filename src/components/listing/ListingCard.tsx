@@ -1,9 +1,17 @@
+'use client';
+
 import Link from 'next/link';
+import Image from 'next/image';
+import type { ReactNode } from 'react';
+
 import LiveCountdown from '@/components/listing/LiveCountdown';
 import type { ListingStatus } from '@/generated/prisma/enums';
-import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 type ListingCardProps = {
+  id?: string;
   title: string;
   href: string;
   currentBid: number;
@@ -12,6 +20,7 @@ type ListingCardProps = {
   status: ListingStatus;
   imageSrc: string;
   variant?: 'default' | 'compact';
+  action?: ReactNode;
 };
 
 function formatCurrency(amount: number) {
@@ -31,6 +40,7 @@ function getStatusLabel(status: ListingStatus) {
 }
 
 export default function ListingCard({
+  id,
   title,
   href,
   currentBid,
@@ -39,131 +49,153 @@ export default function ListingCard({
   status,
   imageSrc,
   variant = 'default',
+  action,
 }: ListingCardProps) {
   const isLive = status === 'LIVE';
   const compact = variant === 'compact';
+  const showCountdown = isLive && endTime;
+
+  const ui = compact
+    ? {
+        container: 'h-full w-full min-w-0',
+        link: 'block h-full w-full min-w-0',
+        card: 'h-full rounded-xl border border-outline/80 bg-card p-2 shadow-none gap-0',
+        imageWrap: 'mb-2 aspect-square rounded-lg',
+        imageClass: 'rounded-lg object-contain',
+        status: 'left-1.5 top-1.5 px-2 py-1 text-xs font-semibold leading-none',
+        title: 'mb-1.5 min-h-8 line-clamp-2 text-xs font-semibold leading-4',
+        bidMeta: 'mb-1.5 min-h-10',
+        bidLabel: 'text-[9px] tracking-wide',
+        bidValue: 'text-sm font-bold leading-tight',
+        bidCount: 'text-[10px] text-grey',
+        countdownWrap: 'mb-2 min-h-5 text-[10px] leading-tight',
+        countdownValue: 'font-mono text-[11px] font-semibold text-white',
+        button: 'rounded-md py-2 text-[11px] font-bold tracking-wide',
+        cta: 'BID NOW',
+        imageSizes:
+          '(max-width: 640px) 46vw, (max-width: 1024px) 30vw, (max-width: 1280px) 20vw, 14vw',
+      }
+    : {
+        container:
+          'h-full w-[9.75rem] max-w-[42vw] shrink-0 snap-start sm:w-[10.5rem] md:w-full md:max-w-none',
+        link: 'block h-full w-full',
+        card: 'h-full rounded-lg border border-outline bg-card p-2.5 shadow-none gap-0',
+        imageWrap: 'mb-2 aspect-square rounded-md',
+        imageClass: 'rounded-md object-contain',
+        status: 'left-2 top-2 px-2 py-1 text-xs font-semibold leading-none',
+        title: 'mb-2 min-h-8 line-clamp-2 text-xs font-medium leading-snug',
+        bidMeta: 'mb-2 min-h-10',
+        bidLabel: 'text-[10px] tracking-wide',
+        bidValue: 'text-base font-bold leading-tight',
+        bidCount: 'text-[10px] text-grey',
+        countdownWrap: 'mb-2.5 min-h-5 text-[10px] leading-tight',
+        countdownValue: 'font-mono text-[11px] font-semibold text-white',
+        button: 'rounded-md py-2 text-xs font-bold tracking-wide',
+        cta: 'BID NOW',
+        imageSizes: '(max-width: 768px) 168px, 200px',
+      };
 
   return (
-    <Link
-      href={href}
-      className={`block no-underline text-inherit outline-none ring-offset-background cursor-pointer focus-visible:ring-2 focus-visible:ring-ring ${
-        compact
-          ? 'w-full'
-          : 'w-66 shrink-0 md:w-[calc((100%-3rem)/3)] lg:w-[calc((100%-4.5rem)/4)] xl:w-[calc((100%-6rem)/5)]'
-      }`}
-    >
-      <div
-        className={`bg-card rounded-md flex flex-col text-white border border-outline relative overflow-hidden group ${
-          compact ? 'p-2.5' : 'p-4'
-        }`}
+    <div className={ui.container} data-listing-id={id}>
+      <Card
+        className={cn(
+          'relative flex h-full flex-col overflow-hidden text-white',
+          ui.card,
+        )}
       >
-        <div className='absolute inset-0 bg-gradient-to-b to-transparent pointer-events-none rounded-md' />
-
-        <div
-          className={`relative w-full aspect-square rounded-md flex items-center justify-center overflow-hidden ${
-            compact ? 'mb-2' : 'mb-4'
-          }`}
-        >
-          {imageSrc ? (
-            <Image
-              src={imageSrc}
-              alt={title}
-              fill
-              sizes={
-                compact
-                  ? '(max-width: 768px) 48vw, (max-width: 1024px) 31vw, (max-width: 1280px) 23vw, 16vw'
-                  : '(max-width: 768px) 264px, (max-width: 1024px) 33vw, 25vw'
-              }
-              className='object-cover rounded-md'
-            />
-          ) : (
-            <div className='absolute inset-0 flex items-center justify-center bg-muted text-xs text-grey rounded-md'>
-              No image
-            </div>
+        <Link
+          href={href}
+          className={cn(
+            'flex h-full flex-col cursor-pointer text-inherit no-underline outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring',
+            ui.link,
           )}
+        >
+          <div className={cn('relative w-full overflow-hidden', ui.imageWrap)}>
+            {imageSrc ? (
+              <Image
+                src={imageSrc}
+                alt={title}
+                fill
+                sizes={ui.imageSizes}
+                className={ui.imageClass}
+              />
+            ) : (
+              <div className='absolute inset-0 flex items-center justify-center rounded-md bg-muted text-[10px] text-grey'>
+                No image
+              </div>
+            )}
+
+            <Badge
+              className={cn(
+                'absolute flex items-center gap-1 rounded border border-gray-700 bg-background text-white backdrop-blur-md ',
+                ui.status,
+              )}
+            >
+              {isLive ? (
+                <span className='relative flex h-2 w-2'>
+                  <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75' />
+                  <span className='relative inline-flex h-2 w-2 rounded-full bg-red-600' />
+                </span>
+              ) : (
+                <span className='inline-flex h-1.5 w-1.5 rounded-full bg-green-400' />
+              )}
+              {getStatusLabel(status)}
+            </Badge>
+          </div>
+
+          <h3 className={ui.title}>{title}</h3>
+
+          <div className={ui.bidMeta}>
+            <div className='flex min-w-0 flex-nowrap items-baseline gap-x-1'>
+              <span
+                className={cn(
+                  'shrink-0 font-semibold text-[#e2b054]',
+                  ui.bidLabel,
+                )}
+              >
+                BID:
+              </span>
+              <span
+                className={cn(
+                  'min-w-0 truncate whitespace-nowrap font-bold text-[#e2b054]',
+                  ui.bidValue,
+                )}
+              >
+                {formatCurrency(currentBid)}
+              </span>
+            </div>
+            <span className={ui.bidCount}>{bidCount} bids</span>
+          </div>
+
+          <div className={ui.countdownWrap}>
+            {showCountdown ? (
+              <div className='flex min-w-0 flex-nowrap items-baseline gap-x-1'>
+                <span className='shrink-0 uppercase tracking-wide text-grey'>
+                  Ends:
+                </span>
+                <LiveCountdown
+                  endAt={endTime}
+                  mode='tokens'
+                  className={ui.countdownValue}
+                />
+              </div>
+            ) : (
+              <span className='text-grey/70'>No countdown</span>
+            )}
+          </div>
 
           <div
-            className={`absolute left-2 bottom-2 bg-[#121418]/80 backdrop-blur-md border border-gray-700 rounded-md flex items-center gap-1.5 ${
-              compact
-                ? 'px-1.5 py-0.5 text-[10px] font-semibold'
-                : 'px-2.5 py-1.5 text-2xs font-bold'
-            }`}
-          >
-            {isLive ? (
-              <span className='relative flex h-2 w-2'>
-                <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75' />
-                <span className='relative inline-flex rounded-full h-2 w-2 bg-red-600' />
-              </span>
-            ) : (
-              <span className='inline-flex h-2 w-2 rounded-full bg-green-400' />
+            className={cn(
+              'mt-auto w-full bg-linear-to-r from-[#ff8c00] to-[#ffaa00] text-center text-background',
+              ui.button,
             )}
-            {getStatusLabel(status)}
-          </div>
-        </div>
-
-        <h3
-          className={`font-medium leading-snug text-white ${
-            compact
-              ? 'text-sm mb-1.5 line-clamp-1'
-              : 'text-sm mb-3 line-clamp-2'
-          }`}
-        >
-          {title}
-        </h3>
-
-        <div className={compact ? 'mb-2' : 'mb-4'}>
-          <div className='flex items-baseline gap-1.5'>
-            <span
-              className={`text-[#e2b054] font-semibold tracking-wider ${
-                compact ? 'text-[10px]' : 'text-xs'
-              }`}
-            >
-              BID:
-            </span>
-            <span
-              className={`text-[#e2b054] font-bold ${compact ? 'text-base' : 'text-xl'}`}
-            >
-              {formatCurrency(currentBid)}
-            </span>
-          </div>
-          <span
-            className={`text-grey ${compact ? 'text-[11px]' : 'text-xs mt-0.5'}`}
           >
-            {bidCount} bids
-          </span>
-        </div>
+            {ui.cta}
+          </div>
+        </Link>
 
-        <div
-          className={`text-grey flex items-center gap-1 ${
-            compact ? 'mb-2 text-[11px]' : 'mb-5 text-xs'
-          }`}
-        >
-          {isLive && endTime ? (
-            <div>
-              <span className='tracking-wide uppercase'>Ends:</span>
-              <LiveCountdown
-                endAt={endTime}
-                mode='tokens'
-                className={
-                  compact
-                    ? 'font-mono text-[11px] text-white'
-                    : 'font-mono text-sm font-semibold text-white'
-                }
-              />
-            </div>
-          ) : (
-            <span className='font-medium text-transparent'>-</span>
-          )}
-        </div>
-
-        <div
-          className={`w-full bg-gradient-to-r from-[#ff8c00] to-[#ffaa00] text-background font-bold rounded-md text-center ${
-            compact ? 'py-2 text-xs' : 'py-3.5'
-          }`}
-        >
-          {compact ? 'BID' : isLive ? 'PLACE BID' : 'BE FIRST BID'}
-        </div>
-      </div>
-    </Link>
+        {action ? <div className='mt-2'>{action}</div> : null}
+      </Card>
+    </div>
   );
 }

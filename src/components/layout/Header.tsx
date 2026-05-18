@@ -9,7 +9,7 @@ export default async function Header() {
         session?.user as {
           id: string;
           name: string | null;
-          email: string;
+          email: string | null;
           image: string | null;
         } | null
       }
