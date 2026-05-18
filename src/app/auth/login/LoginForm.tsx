@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 import { LoginSchema, type LoginInput } from '@/lib/auth/schemas';
 import { Button } from '@/components/ui/button';
@@ -73,9 +74,12 @@ export default function LoginForm() {
             <FormItem>
               <div className='flex items-center justify-between'>
                 <FormLabel>Password</FormLabel>
-                <span className='text-xs text-grey' title='Not implemented yet'>
+                <Link
+                  href='/auth/forgot-password'
+                  className='text-xs text-grey hover:text-white underline-offset-2 hover:underline'
+                >
                   Forgot password?
-                </span>
+                </Link>
               </div>
               <FormControl>
                 <Input

@@ -11,6 +11,7 @@ import { SignupFormSchema, type SignupFormInput } from '@/lib/auth/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -69,34 +70,35 @@ export default function SignupPage() {
       return;
     }
 
-    router.push('/listings');
+    router.push('/auth/verify-email');
     router.refresh();
   }
 
   return (
     <main className='min-h-dvh px-4 pb-[max(4rem,env(safe-area-inset-bottom))] pt-[max(11rem,env(safe-area-inset-top))] font-sans text-white md:min-h-screen md:pb-16 md:pt-16'>
-      <div className='mx-auto flex w-full max-w-md flex-col gap-6 py-6 md:gap-8 md:py-12'>
-        <div>
-          <h1 className='text-xl font-bold tracking-tight md:text-2xl'>
+      <Card className='mx-auto flex w-full max-w-md flex-col gap-0 border-outline bg-card py-0 md:my-12'>
+        <CardHeader className='px-5 pt-5 pb-2 md:px-6 md:pt-6'>
+          <CardTitle className='text-xl tracking-tight md:text-2xl'>
             Create your account
-          </h1>
+          </CardTitle>
           <p className='mt-2 text-sm leading-snug text-grey'>
             Already have an account?{' '}
-            <Link
-              href='/auth/login'
-              className='text-brand hover:text-brand-hover underline-offset-2 hover:underline'
+            <Button
+              asChild
+              variant='link'
+              className='text-brand hover:text-brand-hover h-auto p-0 underline-offset-2 hover:underline'
             >
-              Log in
-            </Link>
+              <Link href='/auth/login'>Log in</Link>
+            </Button>
           </p>
-        </div>
-
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className='flex flex-col gap-4 md:gap-5'
-            noValidate
-          >
+        </CardHeader>
+        <CardContent className='px-5 pb-5 md:px-6 md:pb-6'>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className='flex flex-col gap-4 md:gap-5'
+              noValidate
+            >
             <FormField
               control={form.control}
               name='name'
@@ -203,9 +205,10 @@ export default function SignupPage() {
             >
               {form.formState.isSubmitting ? 'Creating account…' : 'Sign up'}
             </Button>
-          </form>
-        </Form>
-      </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

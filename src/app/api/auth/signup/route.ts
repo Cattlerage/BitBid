@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { SignupServerSchema } from '@/lib/auth/schemas';
+import { issueAuthToken } from '@/lib/auth/tokens';
+import { sendEmail } from '@/lib/email/resend';
+import { VerifyEmailTemplate } from '@/emails/verify-email';
+import { getAppUrl } from '@/lib/app-url';
 
 export async function POST(request: Request) {
   let json;
@@ -32,8 +36,17 @@ export async function POST(request: Request) {
   const passwordHash = await bcrypt.hash(password, 10);
 
   await prisma.user.create({
-    data: { name, email, passwordHash },
+    data: { name, email, passwordHash, role: 'USER' },
     select: { id: true },
+  });
+
+  const verifyToken = await issueAuthToken(email, 'verify');
+  const verifyUrl = `${getAppUrl()}/api/auth/verify-email?token=${encodeURIComponent(verifyToken)}`;
+
+  await sendEmail({
+    to: email,
+    subject: 'Verify your BitBid email',
+    react: VerifyEmailTemplate({ verifyUrl }),
   });
 
   return NextResponse.json({ ok: true }, { status: 201 });
